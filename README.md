@@ -7,9 +7,24 @@ Features
 - Scanning-system designed to check your own infra for vulnerable log4j-installations
 - start and stop scans ([CTRL-C] is your friend), continue and skip already tested
 - use your own DNS-server that listens to Requests from scanned hosts
-- unique requests for each host to be scanned
+- unique requests for each host to be scanned 
 - easy to correlate which host sends a callback
 - reportmode to see which hosts made a callback
+
+### unique requests
+
+- each payload is unique, so you can see which host triggered
+  a response or maybe backend-system were connected 
+
+~~~
+
+PAYLOAD: e3a4d77618a0  .  3c028d   .  l4s.scanix.edu
+         ^^^              ^^^         ^^^
+         host_id          scan_id     your custom nameserver
+
+
+~~~
+
 
 ![img](img/hrafna.png)
 
@@ -21,6 +36,20 @@ Features
 
 
 ### config
+
+- l4s.scanix.edu is our example here, change according to your own needs 
+
+
+- global_config
+
+~~~
+
+global.yaml
+
+base_scan_domain: l4s.scanix.edu
+bind_log: /var/log/bind/hrafna.log
+
+~~~
 
 - each scan has a unique config-file in yaml-format
 
@@ -78,9 +107,38 @@ optional:
 - GOTO DNS-Zonefile
 
 
-- bind_zonefile - change l4s.scanix.edu to your own domain / subdomain
+- lcoal named.conf 
 
 ~~~
+
+# named.conf.local
+
+...
+
+
+zone "l4s.scanix.edu." {
+        type master;
+        file "/etc/bind/l4s.zone";
+};
+
+logging {
+  channel "querylog" {
+    file "/var/log/bind9/hrafna.log";
+    print-time yes;
+  };
+  category queries { querylog; };
+};
+
+...
+
+~~~
+
+
+- bind_zonefile  - change l4s.scanix.edu to your own domain / subdomain
+
+~~~
+
+# /etc/bind/l4s.zone
 
 ; l4s.scanix.edu
 $TTL 60
