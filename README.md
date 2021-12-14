@@ -86,15 +86,21 @@ optional:
 
 ### run
 
+~~~
 
-./hrafna scan scan.yaml -> execute/continue a scan
+./hrafna scan scan.yaml    -> execute/continue a scan, requests
+                              are stored in output/scan_name/global.log
 
-./hrafna report scan.yaml
+./hrafna report scan.yaml  -> check sended request against
+                              your BIND-log (see global.log)
 
-./hrafna reset scan.yaml
+./hrafna reset scan.yaml   -> copy a scan to output/scan_name.TIMESTAMP
+                              allows you to execute another scan
 
 
-# Setup the scanner
+~~~
+
+# Setup the scanner and BIND
 
 - have your dns-server and your scanner on the same maschine for auto_reports
   (scanner neesd to read the bind-logfile)
