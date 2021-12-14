@@ -26,7 +26,7 @@ PAYLOAD: e3a4d77618a0  .  3c028d   .  l4s.scanix.edu
 ~~~
 
 
-![img](img/hrafna.png)
+![img](img/scan.png)
 
 
 ### install
