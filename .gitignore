@@ -1,0 +1,5 @@
+base_scan_domain
+*.pyc
+*.yaml
+output/*
+sync_*.sh
