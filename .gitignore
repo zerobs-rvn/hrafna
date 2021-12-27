@@ -3,3 +3,4 @@ base_scan_domain
 *.yaml
 output/*
 sync_*.sh
+*.urls
