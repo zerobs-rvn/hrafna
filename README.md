@@ -10,6 +10,8 @@ Features
 - unique requests for each host to be scanned 
 - easy to correlate which host sends a callback
 - reportmode to see which hosts made a callback
+- adjustable fields for the payload for app-specific/customized attackpatterns
+
 
 ### unique requests
 
@@ -68,10 +70,27 @@ input_file: hostnames.txt
 
 - name: give your scan a name (alphanum, spaces will get converted to "_"
 - mode:
-    - default 8currently the only mode, but more will get added as new
-      attackvectors are dropping in, "vmware" is already in testing
+    - see payloads/*.yaml for more specific payloads
+    
+    - default: (currently the only mode, but more will get added as new
+      attackvectors are dropping in)
+    - all: getting all available payloads
+    - additional: currently in private mode (6 apps and counting)
+      
 - input_file: your file with targets (IPs or hostnames), full urls
   including ports preferred, otherwise only https://target/ is checked
+
+~~~
+# default.yaml
+
+url:  /?id={{PAYLOAD}}
+headers:
+  - "User-Agent: {{PAYLOAD}}"
+  - "X-Request-ID: {{PAYLOAD}}"
+  - "Referer: {{PAYLOAD}}"
+
+
+~~~
 
 optional:
 
@@ -110,10 +129,21 @@ optional:
 
 # your bind config
 
-- GOTO DNS-Zonefile
+- GOTO DNS-Zonefile of your scanning domain (scanix.edu)
+
+~~~
+
+l4s		IN	A	    1.2.3.4
+l4s		IN	AAAA	2a01:::::1
+l4s		IN	NS     	l4s
 
 
-- lcoal named.conf 
+~~~
+
+
+
+
+- local named.conf 
 
 ~~~
 
@@ -169,3 +199,34 @@ l4s.scanix.edu.                  IN AAAA         2a01:4f8::::
 
 
 
+
+# Changelog
+
+
+
+
+
+### 0.4 - 2021-12-22
+
+- bypasses and bypasses2
+    - https://twitter.com/marcioalm/status/1471740771581652995
+
+- scan_profiles
+    - vmware
+    - paloalto-globalprotect
+    - solr
+    - mobileiron
+    - default / blind_shot
+
+
+### 0.2 - 2021-12-12
+
+- first naive scanner
+- evasions
+- dns
+- custom scan-hostnames
+
+
+### 01. 2021-12-10
+
+- internal release only 

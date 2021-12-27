@@ -21,6 +21,19 @@ Modes
   
   """)
 
+def pg(text):
+  cprint("""%s""" % text, "green")
+
+def pr(text):
+  cprint("""%s""" % text, "red")
+
+def pm(text):
+  cprint("""%s""" % text, "magenta")
+
+def pyw(text):
+  cprint("""%s""" % text, "yellow")
+  
+
 
 def welcome(version):
   

