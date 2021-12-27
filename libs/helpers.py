@@ -35,7 +35,7 @@ def pyw(text):
   
 
 
-def welcome(version):
+def welcome(version, mode):
   
   cprint("""
   
@@ -50,6 +50,7 @@ def welcome(version):
       log4j-scanner for the masses
       CVE-2021-44228
     
-      version: %s
+      version  : %s
+      mode     : %s
   
-  """ % version, "green")
+  """ % (version, mode), "green")

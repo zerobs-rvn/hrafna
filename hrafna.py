@@ -444,7 +444,7 @@ if __name__ == "__main__":
 
   # nao we can haz welcome
   
-  welcome(this_version)
+  welcome(this_version, mode)
 
 
   url_list = scan_yaml["input_file"]

@@ -28,7 +28,7 @@ PAYLOAD: e3a4d77618a0  .  3c028d   .  l4s.scanix.edu
 ~~~
 
 
-![img](img/scan.png)
+![img](img/scan04.png)
 
 
 ### install
@@ -119,6 +119,14 @@ optional:
 
 ~~~
 
+
+### output and reports
+
+- output for each scan is stored in `output/scan_name/scan_name-matched.csv`
+
+![matched](img/report.png)
+
+
 # Setup the scanner and BIND
 
 - have your dns-server and your scanner on the same maschine for auto_reports
@@ -208,15 +216,16 @@ l4s.scanix.edu.                  IN AAAA         2a01:4f8::::
 
 ### 0.4 - 2021-12-22
 
+- better report and csv-output
+
+
 - bypasses and bypasses2
     - https://twitter.com/marcioalm/status/1471740771581652995
 
 - scan_profiles
-    - vmware
-    - paloalto-globalprotect
-    - solr
-    - mobileiron
     - default / blind_shot
+    - more are in private mode currently
+
 
 
 ### 0.2 - 2021-12-12
