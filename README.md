@@ -122,7 +122,7 @@ optional:
 
 ### output and reports
 
-- output for each scan is stored in `output/scan_name/scan_name-matched.csv`
+- output for each scan is stored in `output/$scan_name/$scan_name-matched.csv`
 
 ![matched](img/report.png)
 
